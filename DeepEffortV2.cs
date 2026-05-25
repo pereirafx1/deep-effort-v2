@@ -273,7 +273,6 @@ namespace DeepEffortV2Indicator
 
             // Bar width in pixels measured from bar 0→1 (consistent reference point)
             int barWidth = ChartInfo.GetXByBar(1) - ChartInfo.GetXByBar(0);
-            int halfBox  = (int)(barWidth * BoxWidthMultiplier / 2m);
 
             // Semi-transparent fill, solid 1px border — no text labels
             var bullFill = Color.FromArgb(120, 0,  80, 0);
@@ -287,10 +286,9 @@ namespace DeepEffortV2Indicator
 
                 var candle = GetCandle(bar);
 
-                // X: centered on the bar, width scaled by BoxWidthMultiplier
-                int xCenter = ChartInfo.GetXByBar(bar);
-                int xLeft   = xCenter - halfBox;
-                int xRight  = xCenter + halfBox;
+                // X: left edge anchored to candle, right extends by BoxWidthMultiplier
+                int xLeft   = ChartInfo.GetXByBar(bar);
+                int xRight  = xLeft + (int)(barWidth * BoxWidthMultiplier);
 
                 // Y: candle High to Low
                 int yTop = ChartInfo.GetYByPrice(candle.High);
