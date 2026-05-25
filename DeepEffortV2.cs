@@ -272,10 +272,9 @@ namespace DeepEffortV2Indicator
             var bearPen   = new OFT.Rendering.Tools.RenderPen(bearBorder, _boxBorderWidth);
             var labelFont = new OFT.Rendering.Tools.RenderFont("Arial", 8f);
 
-            int firstBar = ChartInfo.PriceChartContainer.FirstVisibleBarIndex;
-            int lastBar  = ChartInfo.PriceChartContainer.LastVisibleBarIndex;
-
-            for (int bar = firstBar; bar <= lastBar; bar++)
+            // Iterate all calculated bars; GetXByBar returns off-screen coords
+            // for bars outside the visible area so nothing extra is drawn.
+            for (int bar = 0; bar < CurrentBar; bar++)
             {
                 if (!_signals.TryGetValue(bar, out var signal)) continue;
 
