@@ -25,5 +25,9 @@
       <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Attributes.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Utils.Common">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\Utils.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 </Project>
