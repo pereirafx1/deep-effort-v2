@@ -44,6 +44,17 @@ namespace DeepEffortV2Indicator
             public decimal Score;
         }
 
+        // Groups consecutive same-type signal bars (within 3 bars of each other)
+        // into a single zone box drawn across their combined price range.
+        private struct SignalGroup
+        {
+            public int     FirstBar;
+            public int     LastBar;
+            public bool    IsBull;
+            public decimal High;   // highest High of all candles in the group
+            public decimal Low;    // lowest  Low  of all candles in the group
+        }
+
         // ═══════════════════════════════════════════════════════════════════════
         //  Configurable parameters
         // ═══════════════════════════════════════════════════════════════════════
@@ -262,58 +273,84 @@ namespace DeepEffortV2Indicator
         {
             if (layout != DrawingLayouts.Final) return;
             if (ChartInfo is null) return;
+            if (_signals.Count == 0) return;
 
-            // ── Derive fully-opaque border colours from the (possibly semi-transparent) fills ─
-            var bullBorder = Color.FromArgb(255, _boxColorBull.R, _boxColorBull.G, _boxColorBull.B);
-            var bearBorder = Color.FromArgb(255, _boxColorBear.R, _boxColorBear.G, _boxColorBear.B);
+            // ── Sort signal bar indices ascending ────────────────────────────
+            var sortedBars = new List<int>(_signals.Keys);
+            sortedBars.Sort();
 
-            // ── Create OFT rendering resources for this frame ───────────────
-            var bullPen   = new OFT.Rendering.Tools.RenderPen(bullBorder, _boxBorderWidth);
-            var bearPen   = new OFT.Rendering.Tools.RenderPen(bearBorder, _boxBorderWidth);
-            var labelFont = new OFT.Rendering.Tools.RenderFont("Arial", 8f);
-
-            // Iterate all calculated bars; GetXByBar returns off-screen coords
-            // for bars outside the visible area so nothing extra is drawn.
-            for (int bar = 0; bar < CurrentBar; bar++)
+            // ── Merge consecutive same-type bars within 3-bar gap into groups ─
+            var groups = new List<SignalGroup>();
             {
-                if (!_signals.TryGetValue(bar, out var signal)) continue;
+                int     fb    = sortedBars[0];
+                int     lb    = fb;
+                bool    bull  = _signals[fb].IsBull;
+                decimal gHigh = GetCandle(fb).High;
+                decimal gLow  = GetCandle(fb).Low;
 
-                var candle = GetCandle(bar);
+                for (int idx = 1; idx < sortedBars.Count; idx++)
+                {
+                    int     bar    = sortedBars[idx];
+                    bool    isBull = _signals[bar].IsBull;
+                    var     c      = GetCandle(bar);
 
-                // ── Convert price levels to screen pixels ───────────────────
-                // Y increases downward on screen, so higher prices = smaller Y.
-                int xLeft  = ChartInfo.GetXByBar(bar);
-                int xRight = ChartInfo.GetXByBar(bar + 1); // bar is always closed so bar+1 exists
-                int yTop   = ChartInfo.GetYByPrice((decimal)candle.High);
-                int yBot   = ChartInfo.GetYByPrice((decimal)candle.Low);
+                    if (isBull == bull && bar - lb <= 3)
+                    {
+                        // Extend current group
+                        lb = bar;
+                        if (c.High > gHigh) gHigh = c.High;
+                        if (c.Low  < gLow)  gLow  = c.Low;
+                    }
+                    else
+                    {
+                        // Finalise current group, start a new one
+                        groups.Add(new SignalGroup { FirstBar = fb, LastBar = lb,
+                                                     IsBull = bull, High = gHigh, Low = gLow });
+                        fb    = bar;  lb    = bar;
+                        bull  = isBull;
+                        gHigh = c.High;  gLow = c.Low;
+                    }
+                }
+                groups.Add(new SignalGroup { FirstBar = fb, LastBar = lb,
+                                             IsBull = bull, High = gHigh, Low = gLow });
+            }
 
-                // Guard against inverted / degenerate coordinates
+            // ── Fixed zone-box colours (semi-transparent fill, solid border) ─
+            var bullFill = Color.FromArgb(120, 0,  80, 0);
+            var bearFill = Color.FromArgb(120, 80,  0, 0);
+            var bullPen  = new OFT.Rendering.Tools.RenderPen(Color.Green, 1);
+            var bearPen  = new OFT.Rendering.Tools.RenderPen(Color.Red,   1);
+
+            // ── Draw one zone box per group ──────────────────────────────────
+            foreach (var group in groups)
+            {
+                int xLeft      = ChartInfo.GetXByBar(group.FirstBar);
+                int xLastRight = ChartInfo.GetXByBar(group.LastBar + 1);
+                // Half-bar-width padding on the right edge
+                int barWidth   = xLastRight - ChartInfo.GetXByBar(group.LastBar);
+                int xRight     = xLastRight + (barWidth > 0 ? barWidth / 2 : 4);
+
+                // Y increases downward; higher price → smaller Y value
+                int yTop = ChartInfo.GetYByPrice(group.High);
+                int yBot = ChartInfo.GetYByPrice(group.Low);
                 if (yTop > yBot) (yTop, yBot) = (yBot, yTop);
+
                 int w = xRight - xLeft;
                 int h = yBot   - yTop;
                 if (w <= 0 || h <= 0) continue;
 
                 var rect = new Rectangle(xLeft, yTop, w, h);
 
-                // ── Draw filled box + border ─────────────────────────────────
-                if (signal.IsBull)
+                // Fill first so the border renders on top
+                if (group.IsBull)
                 {
-                    context.FillRectangle(_boxColorBull, rect);
-                    context.DrawRectangle(bullPen, rect);
+                    context.FillRectangle(bullFill, rect);
+                    context.DrawRectangle(bullPen,  rect);
                 }
                 else
                 {
-                    context.FillRectangle(_boxColorBear, rect);
-                    context.DrawRectangle(bearPen, rect);
-                }
-
-                // ── Optional effort-score label above the box ────────────────
-                if (_showEffortLabel)
-                {
-                    string label      = signal.Score.ToString("F2");
-                    Color  labelColor = signal.IsBull ? bullBorder : bearBorder;
-                    var    labelRect  = new Rectangle(xLeft, yTop - 14, Math.Max(w, 32), 14);
-                    context.DrawString(label, labelFont, labelColor, labelRect);
+                    context.FillRectangle(bearFill, rect);
+                    context.DrawRectangle(bearPen,  rect);
                 }
             }
         }
