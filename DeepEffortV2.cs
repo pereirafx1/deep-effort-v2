@@ -19,8 +19,8 @@ namespace DeepEffortV2Indicator
     /// DeepEffort v2 — marks candles where buyers or sellers show unusually high
     /// conviction as measured by a five-component normalised effort score.
     ///
-    /// Green box  = bullish aggression signal (delta > 0, BuyEffort ≥ threshold)
-    /// Red   box  = bearish aggression signal (delta &lt; 0, SellEffort ≥ threshold)
+    /// Green box  = bullish aggression signal (delta > 0, BuyEffort >= threshold)
+    /// Red   box  = bearish aggression signal (delta &lt; 0, SellEffort >= threshold)
     ///
     /// Signals only fire on fully closed candles — the indicator does not repaint.
     /// </summary>
@@ -37,16 +37,6 @@ namespace DeepEffortV2Indicator
         // ─── Detected signals ──────────────────────────────────────────────────
         // Keyed by bar index; populated only for closed bars that meet all criteria.
         private readonly Dictionary<int, SignalInfo> _signals = new();
-
-        // ─── Cached GDI rendering resources ───────────────────────────────────
-        // Rebuilt whenever a visual parameter changes to avoid per-frame allocations.
-        private Pen        _bullBorderPen  = null!;
-        private Pen        _bearBorderPen  = null!;
-        private SolidBrush _bullFillBrush  = null!;
-        private SolidBrush _bearFillBrush  = null!;
-        private Font       _labelFont      = null!;
-        private SolidBrush _bullLabelBrush = null!;
-        private SolidBrush _bearLabelBrush = null!;
 
         private struct SignalInfo
         {
@@ -93,7 +83,7 @@ namespace DeepEffortV2Indicator
         public Color BoxColorBull
         {
             get => _boxColorBull;
-            set { _boxColorBull = value; RebuildRenderResources(); }
+            set => _boxColorBull = value;
         }
 
         /// <summary>
@@ -103,14 +93,14 @@ namespace DeepEffortV2Indicator
         public Color BoxColorBear
         {
             get => _boxColorBear;
-            set { _boxColorBear = value; RebuildRenderResources(); }
+            set => _boxColorBear = value;
         }
 
         /// <summary>Width in pixels of the rectangle border drawn around the candle.</summary>
         public int BoxBorderWidth
         {
             get => _boxBorderWidth;
-            set { _boxBorderWidth = value; RebuildRenderResources(); }
+            set => _boxBorderWidth = value;
         }
 
         /// <summary>When true, the effort score (0.00–1.00) is printed above each box.</summary>
@@ -121,7 +111,7 @@ namespace DeepEffortV2Indicator
         }
 
         /// <summary>
-        /// Candle total volume must be ≥ (average volume × MinVolumeMultiplier).
+        /// Candle total volume must be >= (average volume * MinVolumeMultiplier).
         /// Default 1.0 means "candle volume must exceed the lookback average."
         /// </summary>
         public decimal MinVolumeMultiplier
@@ -136,15 +126,12 @@ namespace DeepEffortV2Indicator
 
         public DeepEffortV2()
         {
-            // Enable the OnRender callback and subscribe to the final drawing pass.
             EnableCustomDrawing = true;
             SubscribeToDrawingEvents(DrawingLayouts.Final);
-
-            RebuildRenderResources();
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        //  Calculation logic  (called once per bar, oldest → newest)
+        //  Calculation logic  (called once per bar, oldest -> newest)
         // ═══════════════════════════════════════════════════════════════════════
 
         protected override void OnCalculate(int bar, decimal value)
@@ -194,7 +181,7 @@ namespace DeepEffortV2Indicator
             if (bar < LookbackPeriod)
                 return;
 
-            // ── Build lookback window: bars [bar−N … bar−1] ─────────────────
+            // ── Build lookback window: bars [bar-N ... bar-1] ───────────────
             int windowStart = bar - LookbackPeriod;
             var volWindow   = new List<decimal>(LookbackPeriod);
             var drWindow    = new List<decimal>(LookbackPeriod);
@@ -273,8 +260,17 @@ namespace DeepEffortV2Indicator
 
         protected override void OnRender(RenderContext context, DrawingLayouts layout)
         {
-            // Only draw on the final pass (on top of candles / volume bars).
             if (layout != DrawingLayouts.Final) return;
+            if (ChartInfo is null) return;
+
+            // ── Derive fully-opaque border colours from the (possibly semi-transparent) fills ─
+            var bullBorder = Color.FromArgb(255, _boxColorBull.R, _boxColorBull.G, _boxColorBull.B);
+            var bearBorder = Color.FromArgb(255, _boxColorBear.R, _boxColorBear.G, _boxColorBear.B);
+
+            // ── Create OFT rendering resources for this frame ───────────────
+            var bullPen   = new OFT.Rendering.Tools.RenderPen(bullBorder, _boxBorderWidth);
+            var bearPen   = new OFT.Rendering.Tools.RenderPen(bearBorder, _boxBorderWidth);
+            var labelFont = new OFT.Rendering.Tools.RenderFont("Arial", 8f);
 
             int firstBar = ChartInfo.FirstVisibleBarNumber;
             int lastBar  = ChartInfo.LastVisibleBarNumber;
@@ -303,72 +299,24 @@ namespace DeepEffortV2Indicator
                 // ── Draw filled box + border ─────────────────────────────────
                 if (signal.IsBull)
                 {
-                    context.FillRectangle(_bullFillBrush, rect);
-                    context.DrawRectangle(_bullBorderPen, rect);
+                    context.FillRectangle(_boxColorBull, rect);
+                    context.DrawRectangle(bullPen, rect);
                 }
                 else
                 {
-                    context.FillRectangle(_bearFillBrush, rect);
-                    context.DrawRectangle(_bearBorderPen, rect);
+                    context.FillRectangle(_boxColorBear, rect);
+                    context.DrawRectangle(bearPen, rect);
                 }
 
                 // ── Optional effort-score label above the box ────────────────
-                if (ShowEffortLabel)
+                if (_showEffortLabel)
                 {
-                    string     label    = signal.Score.ToString("F2");
-                    SolidBrush lblBrush = signal.IsBull ? _bullLabelBrush : _bearLabelBrush;
-
-                    // Place label just above the box; widen slot so it doesn't clip.
-                    var labelRect = new RectangleF(xLeft, yTop - 14f, Math.Max(w, 32), 14f);
-                    context.DrawString(label, _labelFont, lblBrush, labelRect);
+                    string label      = signal.Score.ToString("F2");
+                    Color  labelColor = signal.IsBull ? bullBorder : bearBorder;
+                    var    labelRect  = new Rectangle(xLeft, yTop - 14, Math.Max(w, 32), 14);
+                    context.DrawString(label, labelFont, labelColor, labelRect);
                 }
             }
-        }
-
-        // ═══════════════════════════════════════════════════════════════════════
-        //  GDI resource management
-        // ═══════════════════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// Disposes current render resources and recreates them from current
-        /// parameter values.  Called from the constructor and every time a visual
-        /// parameter changes so that OnRender never allocates on the hot path.
-        /// </summary>
-        private void RebuildRenderResources()
-        {
-            // Dispose old objects before reassigning.
-            _bullBorderPen?.Dispose();
-            _bearBorderPen?.Dispose();
-            _bullFillBrush?.Dispose();
-            _bearFillBrush?.Dispose();
-            _labelFont?.Dispose();
-            _bullLabelBrush?.Dispose();
-            _bearLabelBrush?.Dispose();
-
-            // Border is fully opaque; derive hue from the fill colour's RGB channels.
-            var bullBorder = Color.FromArgb(255, _boxColorBull.R, _boxColorBull.G, _boxColorBull.B);
-            var bearBorder = Color.FromArgb(255, _boxColorBear.R, _boxColorBear.G, _boxColorBear.B);
-
-            _bullBorderPen  = new Pen(bullBorder, _boxBorderWidth);
-            _bearBorderPen  = new Pen(bearBorder, _boxBorderWidth);
-            _bullFillBrush  = new SolidBrush(_boxColorBull);
-            _bearFillBrush  = new SolidBrush(_boxColorBear);
-            _labelFont      = new Font("Arial", 8f, FontStyle.Bold);
-            _bullLabelBrush = new SolidBrush(bullBorder);
-            _bearLabelBrush = new SolidBrush(bearBorder);
-        }
-
-        /// <summary>Release managed rendering resources when the indicator is removed.</summary>
-        protected override void OnDispose()
-        {
-            _bullBorderPen?.Dispose();
-            _bearBorderPen?.Dispose();
-            _bullFillBrush?.Dispose();
-            _bearFillBrush?.Dispose();
-            _labelFont?.Dispose();
-            _bullLabelBrush?.Dispose();
-            _bearLabelBrush?.Dispose();
-            base.OnDispose();
         }
     }
 }
