@@ -44,17 +44,6 @@ namespace DeepEffortV2Indicator
             public decimal Score;
         }
 
-        // Groups consecutive same-type signal bars (within 3 bars of each other)
-        // into a single zone box drawn across their combined price range.
-        private struct SignalGroup
-        {
-            public int     FirstBar;
-            public int     LastBar;
-            public bool    IsBull;
-            public decimal High;   // highest High of all candles in the group
-            public decimal Low;    // lowest  Low  of all candles in the group
-        }
-
         // ═══════════════════════════════════════════════════════════════════════
         //  Configurable parameters
         // ═══════════════════════════════════════════════════════════════════════
@@ -130,6 +119,13 @@ namespace DeepEffortV2Indicator
             get => _minVolumeMultiplier;
             set { _minVolumeMultiplier = value; RecalculateValues(); }
         }
+
+        /// <summary>
+        /// Controls the width of each signal box relative to the bar width.
+        /// 1.0 = same width as the candle, 2.0 = twice as wide, etc.
+        /// </summary>
+        [Parameter]
+        public decimal BoxWidthMultiplier { get; set; } = 1.0m;
 
         // ═══════════════════════════════════════════════════════════════════════
         //  Constructor
@@ -275,64 +271,30 @@ namespace DeepEffortV2Indicator
             if (ChartInfo is null) return;
             if (_signals.Count == 0) return;
 
-            // ── Sort signal bar indices ascending ────────────────────────────
-            var sortedBars = new List<int>(_signals.Keys);
-            sortedBars.Sort();
+            // Bar width in pixels measured from bar 0→1 (consistent reference point)
+            int barWidth = ChartInfo.GetXByBar(1) - ChartInfo.GetXByBar(0);
+            int halfBox  = (int)(barWidth * BoxWidthMultiplier / 2m);
 
-            // ── Merge consecutive same-type bars within 3-bar gap into groups ─
-            var groups = new List<SignalGroup>();
-            {
-                int     fb    = sortedBars[0];
-                int     lb    = fb;
-                bool    bull  = _signals[fb].IsBull;
-                decimal gHigh = GetCandle(fb).High;
-                decimal gLow  = GetCandle(fb).Low;
-
-                for (int idx = 1; idx < sortedBars.Count; idx++)
-                {
-                    int     bar    = sortedBars[idx];
-                    bool    isBull = _signals[bar].IsBull;
-                    var     c      = GetCandle(bar);
-
-                    if (isBull == bull && bar - lb <= 3)
-                    {
-                        // Extend current group
-                        lb = bar;
-                        if (c.High > gHigh) gHigh = c.High;
-                        if (c.Low  < gLow)  gLow  = c.Low;
-                    }
-                    else
-                    {
-                        // Finalise current group, start a new one
-                        groups.Add(new SignalGroup { FirstBar = fb, LastBar = lb,
-                                                     IsBull = bull, High = gHigh, Low = gLow });
-                        fb    = bar;  lb    = bar;
-                        bull  = isBull;
-                        gHigh = c.High;  gLow = c.Low;
-                    }
-                }
-                groups.Add(new SignalGroup { FirstBar = fb, LastBar = lb,
-                                             IsBull = bull, High = gHigh, Low = gLow });
-            }
-
-            // ── Fixed zone-box colours (semi-transparent fill, solid border) ─
+            // Semi-transparent fill, solid 1px border — no text labels
             var bullFill = Color.FromArgb(120, 0,  80, 0);
             var bearFill = Color.FromArgb(120, 80,  0, 0);
             var bullPen  = new OFT.Rendering.Tools.RenderPen(Color.Green, 1);
             var bearPen  = new OFT.Rendering.Tools.RenderPen(Color.Red,   1);
 
-            // ── Draw one zone box per group ──────────────────────────────────
-            foreach (var group in groups)
+            for (int bar = 0; bar < CurrentBar; bar++)
             {
-                int xLeft      = ChartInfo.GetXByBar(group.FirstBar);
-                int xLastRight = ChartInfo.GetXByBar(group.LastBar + 1);
-                // Half-bar-width padding on the right edge
-                int barWidth   = xLastRight - ChartInfo.GetXByBar(group.LastBar);
-                int xRight     = xLastRight + (barWidth > 0 ? barWidth / 2 : 4);
+                if (!_signals.TryGetValue(bar, out var signal)) continue;
 
-                // Y increases downward; higher price → smaller Y value
-                int yTop = ChartInfo.GetYByPrice(group.High);
-                int yBot = ChartInfo.GetYByPrice(group.Low);
+                var candle = GetCandle(bar);
+
+                // X: centered on the bar, width scaled by BoxWidthMultiplier
+                int xCenter = ChartInfo.GetXByBar(bar);
+                int xLeft   = xCenter - halfBox;
+                int xRight  = xCenter + halfBox;
+
+                // Y: candle High to Low
+                int yTop = ChartInfo.GetYByPrice(candle.High);
+                int yBot = ChartInfo.GetYByPrice(candle.Low);
                 if (yTop > yBot) (yTop, yBot) = (yBot, yTop);
 
                 int w = xRight - xLeft;
@@ -342,7 +304,7 @@ namespace DeepEffortV2Indicator
                 var rect = new Rectangle(xLeft, yTop, w, h);
 
                 // Fill first so the border renders on top
-                if (group.IsBull)
+                if (signal.IsBull)
                 {
                     context.FillRectangle(bullFill, rect);
                     context.DrawRectangle(bullPen,  rect);
