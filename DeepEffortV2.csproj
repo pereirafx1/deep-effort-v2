@@ -15,20 +15,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-      OFT.Indicators is the official ATAS custom-indicator SDK on NuGet.org.
-      It provides: Indicator base class, IndicatorCandle, RenderContext,
-      DrawingLayouts, ChartInfo, and all supporting types.
-
-      If NuGet restore fails (no internet / private environment):
-        1. Comment out this PackageReference.
-        2. Add <Reference> entries pointing at the DLLs inside your ATAS
-           installation folder (typically C:\Program Files\ATAS):
-               ATAS.Indicators.dll
-               OFT.Rendering.dll
-               ATAS.DataFeedsCore.dll
-    -->
-    <PackageReference Include="OFT.Indicators" Version="*" />
+    <!-- ATAS local DLL references — adjust HintPaths if ATAS is installed elsewhere -->
+    <Reference Include="OFT.Indicators">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Indicators.dll</HintPath>
+    </Reference>
+    <Reference Include="OFT.Core">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
