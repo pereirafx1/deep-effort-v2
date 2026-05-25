@@ -272,8 +272,8 @@ namespace DeepEffortV2Indicator
             var bearPen   = new OFT.Rendering.Tools.RenderPen(bearBorder, _boxBorderWidth);
             var labelFont = new OFT.Rendering.Tools.RenderFont("Arial", 8f);
 
-            int firstBar = ChartInfo.FirstVisibleBarNumber;
-            int lastBar  = ChartInfo.LastVisibleBarNumber;
+            int firstBar = ChartInfo.PriceChartContainer.FirstVisibleBarIndex;
+            int lastBar  = ChartInfo.PriceChartContainer.LastVisibleBarIndex;
 
             for (int bar = firstBar; bar <= lastBar; bar++)
             {
@@ -285,8 +285,8 @@ namespace DeepEffortV2Indicator
                 // Y increases downward on screen, so higher prices = smaller Y.
                 int xLeft  = ChartInfo.GetXByBar(bar);
                 int xRight = ChartInfo.GetXByBar(bar + 1); // bar is always closed so bar+1 exists
-                int yTop   = ChartInfo.GetYByValue(candle.High);
-                int yBot   = ChartInfo.GetYByValue(candle.Low);
+                int yTop   = ChartInfo.GetYByPrice((decimal)candle.High);
+                int yBot   = ChartInfo.GetYByPrice((decimal)candle.Low);
 
                 // Guard against inverted / degenerate coordinates
                 if (yTop > yBot) (yTop, yBot) = (yBot, yTop);
