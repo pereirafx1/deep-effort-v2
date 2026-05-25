@@ -1,53 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- ATAS runs on Windows; net8.0-windows gives us System.Drawing without an extra package -->
-    <TargetFramework>net8.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
+    <!--
+      net8.0-windows gives us System.Drawing (GDI+) without an extra package.
+      ATAS is Windows-only so this TFM is always correct.
+      If your ATAS installation targets .NET 6, change this to net6.0-windows.
+    -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyName>DeepEffortV2</AssemblyName>
     <RootNamespace>DeepEffortV2Indicator</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <!-- Suppress warning about unverified ATAS API compatibility across minor versions -->
-    <NoWarn>CS0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <!--
-      OFT.Indicators is the official ATAS custom-indicator SDK published to NuGet.org.
-      Pin to a specific version if you need reproducible builds, e.g. Version="23.x.x".
-      Use Version="*" to always pull the latest release.
+      OFT.Indicators is the official ATAS custom-indicator SDK on NuGet.org.
+      It provides: Indicator base class, IndicatorCandle, RenderContext,
+      DrawingLayouts, ChartInfo, and all supporting types.
 
-      If NuGet restore fails (private or offline environment) you can comment out this
-      PackageReference and instead add the three HintPath <Reference> entries below,
-      pointing at the DLLs in your local ATAS installation folder.
+      If NuGet restore fails (no internet / private environment):
+        1. Comment out this PackageReference.
+        2. Add <Reference> entries pointing at the DLLs inside your ATAS
+           installation folder (typically C:\Program Files\ATAS):
+               ATAS.Indicators.dll
+               OFT.Rendering.dll
+               ATAS.DataFeedsCore.dll
     -->
     <PackageReference Include="OFT.Indicators" Version="*" />
   </ItemGroup>
-
-  <!--
-    ═══ FALLBACK: local DLL references ════════════════════════════════════════
-    Uncomment and adjust the paths below if you prefer to reference the DLLs
-    directly from the ATAS installation directory instead of using NuGet.
-
-  <PropertyGroup>
-    <ATASDir>$(ProgramFiles)\ATAS</ATASDir>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="ATAS.Indicators">
-      <HintPath>$(ATASDir)\ATAS.Indicators.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="OFT.Rendering">
-      <HintPath>$(ATASDir)\OFT.Rendering.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="ATAS.DataFeedsCore">
-      <HintPath>$(ATASDir)\ATAS.DataFeedsCore.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
-  ════════════════════════════════════════════════════════════════════════════ -->
 
 </Project>

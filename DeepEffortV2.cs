@@ -2,8 +2,8 @@
 // Detects high-conviction buyer / seller aggression via a composite normalised
 // effort score and overlays coloured boxes on qualifying candles.
 //
-// Compile:  dotnet build DeepEffortV2.csproj -c Release -o ./output
-// Install:  copy output\DeepEffortV2.dll to your ATAS custom-indicators folder
+// Compile:  dotnet build DeepEffortV2.csproj -c Release
+// Install:  copy bin\Release\net8.0\DeepEffortV2.dll to your ATAS custom-indicators folder
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System;
@@ -74,7 +74,6 @@ namespace DeepEffortV2Indicator
         /// Number of closed candles used to build the percentile-rank lookback window.
         /// Signals are suppressed until this many candles have been seen.
         /// </summary>
-        [Parameter]
         [Display(Name = "Lookback Period", GroupName = "Settings", Order = 1)]
         [Range(5, 500)]
         public int LookbackPeriod
@@ -87,7 +86,6 @@ namespace DeepEffortV2Indicator
         /// Minimum composite effort score (0–1) required to draw a box.
         /// Higher values produce fewer, higher-conviction signals.
         /// </summary>
-        [Parameter]
         [Display(Name = "Effort Threshold", GroupName = "Settings", Order = 2)]
         [Range(0.0, 1.0)]
         public decimal EffortThreshold
@@ -100,7 +98,6 @@ namespace DeepEffortV2Indicator
         /// Fill colour for bullish effort boxes.  Set the alpha channel for transparency.
         /// Default: 40 % opaque green — Color.FromArgb(102, 0, 200, 0).
         /// </summary>
-        [Parameter]
         [Display(Name = "Bull Box Colour", GroupName = "Visuals", Order = 3)]
         public Color BoxColorBull
         {
@@ -112,7 +109,6 @@ namespace DeepEffortV2Indicator
         /// Fill colour for bearish effort boxes.  Set the alpha channel for transparency.
         /// Default: 40 % opaque red — Color.FromArgb(102, 200, 0, 0).
         /// </summary>
-        [Parameter]
         [Display(Name = "Bear Box Colour", GroupName = "Visuals", Order = 4)]
         public Color BoxColorBear
         {
@@ -121,7 +117,6 @@ namespace DeepEffortV2Indicator
         }
 
         /// <summary>Width in pixels of the rectangle border drawn around the candle.</summary>
-        [Parameter]
         [Display(Name = "Box Border Width (px)", GroupName = "Visuals", Order = 5)]
         [Range(1, 10)]
         public int BoxBorderWidth
@@ -131,7 +126,6 @@ namespace DeepEffortV2Indicator
         }
 
         /// <summary>When true, the effort score (0.00–1.00) is printed above each box.</summary>
-        [Parameter]
         [Display(Name = "Show Effort Label", GroupName = "Visuals", Order = 6)]
         public bool ShowEffortLabel
         {
@@ -143,7 +137,6 @@ namespace DeepEffortV2Indicator
         /// Candle total volume must be ≥ (average volume × MinVolumeMultiplier).
         /// Default 1.0 means "candle volume must exceed the lookback average."
         /// </summary>
-        [Parameter]
         [Display(Name = "Min Volume Multiplier", GroupName = "Settings", Order = 7)]
         [Range(0.1, 10.0)]
         public decimal MinVolumeMultiplier
