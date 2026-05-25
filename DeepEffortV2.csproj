@@ -21,5 +21,9 @@
       <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Rendering.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="OFT.Attributes">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Attributes.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 </Project>
