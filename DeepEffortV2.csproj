@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- ATAS runs on Windows; net8.0-windows gives us System.Drawing without an extra package -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>DeepEffortV2</AssemblyName>
+    <RootNamespace>DeepEffortV2Indicator</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Suppress warning about unverified ATAS API compatibility across minor versions -->
+    <NoWarn>CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      OFT.Indicators is the official ATAS custom-indicator SDK published to NuGet.org.
+      Pin to a specific version if you need reproducible builds, e.g. Version="23.x.x".
+      Use Version="*" to always pull the latest release.
+
+      If NuGet restore fails (private or offline environment) you can comment out this
+      PackageReference and instead add the three HintPath <Reference> entries below,
+      pointing at the DLLs in your local ATAS installation folder.
+    -->
+    <PackageReference Include="OFT.Indicators" Version="*" />
+  </ItemGroup>
+
+  <!--
+    ═══ FALLBACK: local DLL references ════════════════════════════════════════
+    Uncomment and adjust the paths below if you prefer to reference the DLLs
+    directly from the ATAS installation directory instead of using NuGet.
+
+  <PropertyGroup>
+    <ATASDir>$(ProgramFiles)\ATAS</ATASDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="ATAS.Indicators">
+      <HintPath>$(ATASDir)\ATAS.Indicators.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OFT.Rendering">
+      <HintPath>$(ATASDir)\OFT.Rendering.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ATAS.DataFeedsCore">
+      <HintPath>$(ATASDir)\ATAS.DataFeedsCore.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  ════════════════════════════════════════════════════════════════════════════ -->
+
+</Project>
