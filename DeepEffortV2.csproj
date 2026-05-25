@@ -1,27 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <AssemblyName>DeepEffortV2</AssemblyName>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <NoWarn>MSB3245;MSB3277;MSB3243</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="OFT.Indicators">
-      <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Indicators.dll</HintPath>
+    <Reference Include="ATAS.Indicators">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\ATAS.Indicators.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="OFT.Core">
       <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="ATAS.Indicators">
-      <HintPath>C:\Program Files (x86)\ATAS Platform\ATAS.Indicators.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="System.Drawing.Common">
-      <HintPath>C:\Program Files (x86)\ATAS Platform\System.Drawing.Common.dll</HintPath>
+    <Reference Include="OFT.Rendering">
+      <HintPath>C:\Program Files (x86)\ATAS Platform\OFT.Rendering.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

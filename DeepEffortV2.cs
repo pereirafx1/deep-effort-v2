@@ -3,17 +3,15 @@
 // effort score and overlays coloured boxes on qualifying candles.
 //
 // Compile:  dotnet build DeepEffortV2.csproj -c Release
-// Install:  copy bin\Release\net8.0\DeepEffortV2.dll to your ATAS custom-indicators folder
+// Install:  copy bin\Release\net10.0-windows\DeepEffortV2.dll to your ATAS custom-indicators folder
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.Drawing;
-using System.Linq;
 using ATAS.Indicators;
 using OFT.Rendering.Context;
+using OFT.Rendering.Settings;
 
 namespace DeepEffortV2Indicator
 {
@@ -26,9 +24,7 @@ namespace DeepEffortV2Indicator
     ///
     /// Signals only fire on fully closed candles — the indicator does not repaint.
     /// </summary>
-    [DisplayName("DeepEffort v2")]
-    [Category("Order Flow")]
-    public sealed class DeepEffortV2 : Indicator
+    public class DeepEffortV2 : Indicator
     {
         // ─── Per-bar metric caches ──────────────────────────────────────────────
         // Stored by bar index so OnCalculate can rebuild the lookback window
@@ -74,8 +70,6 @@ namespace DeepEffortV2Indicator
         /// Number of closed candles used to build the percentile-rank lookback window.
         /// Signals are suppressed until this many candles have been seen.
         /// </summary>
-        [Display(Name = "Lookback Period", GroupName = "Settings", Order = 1)]
-        [Range(5, 500)]
         public int LookbackPeriod
         {
             get => _lookbackPeriod;
@@ -86,8 +80,6 @@ namespace DeepEffortV2Indicator
         /// Minimum composite effort score (0–1) required to draw a box.
         /// Higher values produce fewer, higher-conviction signals.
         /// </summary>
-        [Display(Name = "Effort Threshold", GroupName = "Settings", Order = 2)]
-        [Range(0.0, 1.0)]
         public decimal EffortThreshold
         {
             get => _effortThreshold;
@@ -98,7 +90,6 @@ namespace DeepEffortV2Indicator
         /// Fill colour for bullish effort boxes.  Set the alpha channel for transparency.
         /// Default: 40 % opaque green — Color.FromArgb(102, 0, 200, 0).
         /// </summary>
-        [Display(Name = "Bull Box Colour", GroupName = "Visuals", Order = 3)]
         public Color BoxColorBull
         {
             get => _boxColorBull;
@@ -109,7 +100,6 @@ namespace DeepEffortV2Indicator
         /// Fill colour for bearish effort boxes.  Set the alpha channel for transparency.
         /// Default: 40 % opaque red — Color.FromArgb(102, 200, 0, 0).
         /// </summary>
-        [Display(Name = "Bear Box Colour", GroupName = "Visuals", Order = 4)]
         public Color BoxColorBear
         {
             get => _boxColorBear;
@@ -117,8 +107,6 @@ namespace DeepEffortV2Indicator
         }
 
         /// <summary>Width in pixels of the rectangle border drawn around the candle.</summary>
-        [Display(Name = "Box Border Width (px)", GroupName = "Visuals", Order = 5)]
-        [Range(1, 10)]
         public int BoxBorderWidth
         {
             get => _boxBorderWidth;
@@ -126,7 +114,6 @@ namespace DeepEffortV2Indicator
         }
 
         /// <summary>When true, the effort score (0.00–1.00) is printed above each box.</summary>
-        [Display(Name = "Show Effort Label", GroupName = "Visuals", Order = 6)]
         public bool ShowEffortLabel
         {
             get => _showEffortLabel;
@@ -137,8 +124,6 @@ namespace DeepEffortV2Indicator
         /// Candle total volume must be ≥ (average volume × MinVolumeMultiplier).
         /// Default 1.0 means "candle volume must exceed the lookback average."
         /// </summary>
-        [Display(Name = "Min Volume Multiplier", GroupName = "Settings", Order = 7)]
-        [Range(0.1, 10.0)]
         public decimal MinVolumeMultiplier
         {
             get => _minVolumeMultiplier;
@@ -218,12 +203,12 @@ namespace DeepEffortV2Indicator
 
             for (int i = windowStart; i < bar; i++)
             {
-                if (_barVolumes.TryGetValue(i, out var v))                 volWindow.Add(v);
-                if (_barDeltaRatios.TryGetValue(i, out var d))             drWindow.Add(d);
-                if (_barSpeeds.TryGetValue(i, out var s))                  spWindow.Add(s);
+                if (_barVolumes.TryGetValue(i, out var v))             volWindow.Add(v);
+                if (_barDeltaRatios.TryGetValue(i, out var d))         drWindow.Add(d);
+                if (_barSpeeds.TryGetValue(i, out var s))              spWindow.Add(s);
                 // Only include non-zero range-efficiency values so zero-range
                 // candles don't dilute the distribution.
-                if (_barRangeEffs.TryGetValue(i, out var r) && r > 0)     reWindow.Add(r);
+                if (_barRangeEffs.TryGetValue(i, out var r) && r > 0) reWindow.Add(r);
             }
 
             if (volWindow.Count == 0) return; // not enough data yet
@@ -241,7 +226,9 @@ namespace DeepEffortV2Indicator
                                         : 0.5m;
 
             // ── Average volume gate ─────────────────────────────────────────
-            decimal avgVolume = volWindow.Sum() / volWindow.Count;
+            decimal volSum = 0m;
+            foreach (var v in volWindow) volSum += v;
+            decimal avgVolume = volSum / volWindow.Count;
             if (totalVolume < avgVolume * MinVolumeMultiplier)
                 return;
 
@@ -328,7 +315,7 @@ namespace DeepEffortV2Indicator
                 // ── Optional effort-score label above the box ────────────────
                 if (ShowEffortLabel)
                 {
-                    string     label  = signal.Score.ToString("F2");
+                    string     label    = signal.Score.ToString("F2");
                     SolidBrush lblBrush = signal.IsBull ? _bullLabelBrush : _bearLabelBrush;
 
                     // Place label just above the box; widen slot so it doesn't clip.
